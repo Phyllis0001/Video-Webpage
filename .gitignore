@@ -1,11 +1,14 @@
 node_modules/
 dist/
 
-# Video files (too large for GitHub — serve locally)
+# Ignore raw mp4s at project root — use public/videos/ for deployment
 *.mp4
 *.mov
 *.avi
 *.webm
+
+# But DO track videos inside public/videos/
+!public/videos/*.mp4
 
 # OS
 .DS_Store
