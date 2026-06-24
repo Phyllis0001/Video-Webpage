@@ -176,10 +176,17 @@
 </div>
 
 <!-- ── Three.js (global build via CDN) ───────────────────────────────── -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.min.js"></script>
+<!-- Three.js via ESM importmap (global UMD build was removed in r150+) -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js"
+  }
+}
+</script>
 
-<script>
-'use strict';
+<script type="module">
+import * as THREE from 'three';
 // ─── Renderer ────────────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
