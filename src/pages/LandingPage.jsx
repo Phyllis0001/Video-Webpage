@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { v } from '../utils/videoUrl'
 import './LandingPage.css'
 
 export default function LandingPage() {
@@ -23,7 +24,7 @@ export default function LandingPage() {
       <video
         ref={videoRef}
         className="land__video"
-        src="/videos/Firefly slowly zoom into this image 402125.mp4"
+        src={v('Firefly slowly zoom into this image 402125.mp4')}
         autoPlay muted loop playsInline
       />
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { v } from '../utils/videoUrl'
 import './ChoicePage.css'
 
 const SCENARIOS = [
@@ -10,7 +11,7 @@ const SCENARIOS = [
     mission: 'MISSION 01 — ASSEMBLY',
     tag: 'COMMUNITY · PERFORMANCE · STRUCTURE',
     description: 'Robotic scaffold arrays reconfigure overnight. By morning, an empty lot becomes an amphitheatre. The city assembles itself for human ritual.',
-    previewVideo: '/videos/event_1.mp4',
+    previewVideo: v('event_1.mp4'),
     accent: '#c8a96e',
     accentRgb: '200,169,110',
   },
@@ -21,7 +22,7 @@ const SCENARIOS = [
     mission: 'MISSION 02 — EXCHANGE',
     tag: 'ECONOMY · MOBILITY · TRADE',
     description: 'Modular robotic kiosks emerge at dawn, guided by demand data. They find sun, shelter, and footfall — reshaping trade routes in real time.',
-    previewVideo: '/videos/Market shot1.mp4',
+    previewVideo: v('Market shot1.mp4'),
     accent: '#4aff8a',
     accentRgb: '74,255,138',
   },
@@ -32,7 +33,7 @@ const SCENARIOS = [
     mission: 'MISSION 03 — DISCOVERY',
     tag: 'CHILDHOOD · PLAY · RESPONSIVE',
     description: 'Soft robotic structures respond to children\'s motion. Obstacles grow, tunnels reroute — the ground itself becomes an active collaborator.',
-    previewVideo: '/videos/playground_1.mp4',
+    previewVideo: v('playground_1.mp4'),
     accent: '#9a7eb0',
     accentRgb: '154,126,176',
   },

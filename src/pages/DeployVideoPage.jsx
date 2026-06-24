@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { v } from '../utils/videoUrl'
 import './DeployVideoPage.css'
 
 const DIALOGUE = "Now the construction is done. Would you like to experience the space?"
@@ -65,7 +66,7 @@ export default function DeployVideoPage() {
       <video
         ref={videoRef}
         className="dv-video"
-        src="/videos/Deploy.mp4"
+        src={v('Deploy.mp4')}
         autoPlay
         muted
         playsInline

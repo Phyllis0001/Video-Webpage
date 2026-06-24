@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { v } from '../utils/videoUrl'
 import './StartingVideoPage.css'
 
 export default function StartingVideoPage() {
@@ -45,7 +46,7 @@ export default function StartingVideoPage() {
       <video
         ref={videoRef}
         className="sv-video"
-        src="/videos/starting.mp4"
+        src={v('starting.mp4')}
         autoPlay
         muted
         playsInline

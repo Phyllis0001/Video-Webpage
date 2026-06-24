@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { v } from '../utils/videoUrl'
 import './VideoSequencePage.css'
 
 const SCENARIOS = {
@@ -9,12 +10,12 @@ const SCENARIOS = {
     accent: '#c8a96e',
     accentRgb: '200,169,110',
     videos: [
-      { src: '/videos/event_1.mp4',   caption: 'The robots arrive at dusk.' },
-      { src: '/videos/event_2.mp4',   caption: 'Scaffold arms extend across the field.' },
-      { src: '/videos/event 3.mp4',   caption: 'A structure rises from memory.' },
-      { src: '/videos/event 4.mp4',   caption: 'The amphitheatre takes its final form.' },
-      { src: '/videos/event 5.mp4',   caption: 'People gather as if drawn by instinct.' },
-      { src: '/videos/event 6.mp4',   caption: 'The city performs itself.' },
+      { src: v('event_1.mp4'),   caption: 'The robots arrive at dusk.' },
+      { src: v('event_2.mp4'),   caption: 'Scaffold arms extend across the field.' },
+      { src: v('event 3.mp4'),   caption: 'A structure rises from memory.' },
+      { src: v('event 4.mp4'),   caption: 'The amphitheatre takes its final form.' },
+      { src: v('event 5.mp4'),   caption: 'People gather as if drawn by instinct.' },
+      { src: v('event 6.mp4'),   caption: 'The city performs itself.' },
     ],
   },
   market: {
@@ -23,12 +24,12 @@ const SCENARIOS = {
     accent: '#4aff8a',
     accentRgb: '74,255,138',
     videos: [
-      { src: '/videos/Market shot1.mp4',  caption: 'First units emerge at 5 AM.' },
-      { src: '/videos/market_shot 2.mp4', caption: 'Kiosks orient toward morning sun and footfall.' },
-      { src: '/videos/market_shot 3.mp4', caption: 'Trade routes crystallise in real time.' },
-      { src: '/videos/Market_shot 4.mp4', caption: 'The market remembers its users.' },
-      { src: '/videos/Market_shot 5.mp4', caption: 'Stalls negotiate space between themselves.' },
-      { src: '/videos/Market_shot 6.mp4', caption: 'By evening, the machines retract.' },
+      { src: v('Market shot1.mp4'),  caption: 'First units emerge at 5 AM.' },
+      { src: v('market_shot 2.mp4'), caption: 'Kiosks orient toward morning sun and footfall.' },
+      { src: v('market_shot 3.mp4'), caption: 'Trade routes crystallise in real time.' },
+      { src: v('Market_shot 4.mp4'), caption: 'The market remembers its users.' },
+      { src: v('Market_shot 5.mp4'), caption: 'Stalls negotiate space between themselves.' },
+      { src: v('Market_shot 6.mp4'), caption: 'By evening, the machines retract.' },
     ],
   },
   playground: {
@@ -37,11 +38,11 @@ const SCENARIOS = {
     accent: '#9a7eb0',
     accentRgb: '154,126,176',
     videos: [
-      { src: '/videos/playground_1.mp4', caption: 'A child approaches the responsive ground.' },
-      { src: '/videos/playground_2.mp4', caption: 'The surface reads motion and replies.' },
-      { src: '/videos/playground_3.mp4', caption: 'New tunnels form from nowhere.' },
-      { src: '/videos/Playground_4.mp4', caption: 'The machine learns what joy feels like.' },
-      { src: '/videos/playground 5.mp4', caption: 'Play becomes architecture.' },
+      { src: v('playground_1.mp4'), caption: 'A child approaches the responsive ground.' },
+      { src: v('playground_2.mp4'), caption: 'The surface reads motion and replies.' },
+      { src: v('playground_3.mp4'), caption: 'New tunnels form from nowhere.' },
+      { src: v('Playground_4.mp4'), caption: 'The machine learns what joy feels like.' },
+      { src: v('playground 5.mp4'), caption: 'Play becomes architecture.' },
     ],
   },
 }
