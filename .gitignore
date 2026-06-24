@@ -1,0 +1,16 @@
+node_modules/
+dist/
+
+# Video files (too large for GitHub — serve locally)
+*.mp4
+*.mov
+*.avi
+*.webm
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
