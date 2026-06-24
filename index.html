@@ -1,15 +1,539 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Wolfsburg Vision</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PROJEKT UMBAU — 3D SIMULATION</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; cursor: crosshair; }
+    body { background: #020205; overflow: hidden; font-family: 'Share Tech Mono', monospace; color: #dde8df; }
+    canvas { display: block; }
+
+    /* ── Scanlines ──────────────────────────────────────────────────── */
+    #scanlines {
+      position: fixed; inset: 0; z-index: 9998; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg, transparent 0, transparent 3px,
+        rgba(0,0,0,0.09) 3px, rgba(0,0,0,0.09) 4px
+      );
+    }
+
+    /* ── Enter overlay ──────────────────────────────────────────────── */
+    #overlay {
+      position: fixed; inset: 0; z-index: 500;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(2,2,5,0.88); backdrop-filter: blur(4px);
+      transition: opacity 0.5s ease;
+    }
+    .ov-box {
+      display: flex; flex-direction: column; align-items: center; gap: 1.1rem;
+      padding: 3rem 4.5rem; border: 1px solid rgba(200,169,110,0.45);
+      background: rgba(5,5,8,0.7);
+      animation: ovPulse 2.6s ease-in-out infinite;
+    }
+    @keyframes ovPulse {
+      0%,100% { border-color:rgba(200,169,110,.4); box-shadow:0 0 20px rgba(200,169,110,.1); }
+      50%     { border-color:rgba(200,169,110,.8); box-shadow:0 0 40px rgba(200,169,110,.25); }
+    }
+    .ov-sub   { font-size:.68rem; letter-spacing:.22em; color:rgba(200,169,110,.75); }
+    .ov-title {
+      font-family:'Rajdhani',sans-serif; font-weight:700;
+      font-size:clamp(2.5rem,5vw,4.5rem); letter-spacing:.08em; line-height:1.05;
+      color:#fff; text-align:center;
+    }
+    .ov-desc { font-size:.7rem; letter-spacing:.14em; color:rgba(221,232,223,.45); text-align:center; }
+
+    /* ── Crosshair ──────────────────────────────────────────────────── */
+    #xhair {
+      position:fixed; inset:0; z-index:100; pointer-events:none;
+      display:flex; align-items:center; justify-content:center; opacity:0;
+      transition:opacity .3s ease;
+    }
+    .xh-h { position:absolute; width:18px; height:1px; background:rgba(255,255,255,.7); clip-path:inset(0 36% 0 36%); }
+    .xh-v { position:absolute; height:18px; width:1px;  background:rgba(255,255,255,.7); clip-path:inset(36% 0 36% 0); }
+
+    /* ── Interact hint ──────────────────────────────────────────────── */
+    #hint {
+      position:fixed; bottom:22%; left:50%; transform:translateX(-50%);
+      z-index:100; pointer-events:none;
+      display:flex; flex-direction:column; align-items:center; gap:.5rem;
+      opacity:0; transition:opacity .3s ease;
+    }
+    #hint-key {
+      width:40px; height:40px;
+      border:1px solid rgba(200,169,110,.75); background:rgba(5,5,8,.85);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.1rem; color:#c8a96e; letter-spacing:0;
+      transition:background .2s, box-shadow .2s;
+    }
+    #hint-key.active { background:rgba(200,169,110,.25); box-shadow:0 0 14px rgba(200,169,110,.5); }
+    #hint-action { font-size:.65rem; letter-spacing:.2em; color:rgba(200,169,110,.8); }
+    #hint-label  { font-size:.58rem; letter-spacing:.12em; color:rgba(221,232,223,.38); }
+
+    /* ── Screen title (top-center) ──────────────────────────────────── */
+    #screen-title {
+      position:fixed; top:8vh; left:50%; transform:translateX(-50%);
+      z-index:100; pointer-events:none;
+      font-size:.68rem; letter-spacing:.22em; color:rgba(200,169,110,.7);
+      opacity:0; transition:opacity .3s ease; white-space:nowrap;
+    }
+
+    /* ── Corner HUD ─────────────────────────────────────────────────── */
+    .hud-corner {
+      position:fixed; z-index:100; pointer-events:none;
+      font-size:.62rem; letter-spacing:.15em; color:rgba(200,169,110,.45);
+      display:flex; flex-direction:column; gap:.3rem;
+      opacity:0; transition:opacity .5s ease;
+    }
+    #hud-tl { top:4vh; left:3rem; }
+    #hud-tr { top:4vh; right:3rem; text-align:right; }
+    #hud-bl { bottom:5vh; left:3rem; }
+    #hud-br { bottom:5vh; right:3rem; text-align:right; }
+    .hud-val { color:rgba(221,232,223,.65); }
+
+    /* Playing state indicator */
+    #hud-playing { color:rgba(74,255,138,.7); }
+    #hud-playing.standby { color:rgba(200,169,110,.4); }
+
+    /* ── Zone sign labels ────────────────────────────────────────────── */
+    /* (rendered in 3D, not DOM) */
+  </style>
+</head>
+<body>
+
+<!-- ── Hidden video elements (muted=false, autoplay=false) ────────────── -->
+<div style="display:none" aria-hidden="true">
+  <video id="v0"  src="./videos/Firefly%20slowly%20zoom%20into%20this%20image%20402125.mp4" playsinline preload="metadata" loop></video>
+  <video id="v1"  src="./videos/starting.mp4"       playsinline preload="metadata" loop></video>
+  <video id="v2"  src="./videos/Deploy.mp4"          playsinline preload="metadata" loop></video>
+  <video id="v3"  src="./videos/event_1.mp4"         playsinline preload="metadata" loop></video>
+  <video id="v4"  src="./videos/event_2.mp4"         playsinline preload="metadata" loop></video>
+  <video id="v5"  src="./videos/event%203.mp4"       playsinline preload="metadata" loop></video>
+  <video id="v6"  src="./videos/event%204.mp4"       playsinline preload="metadata" loop></video>
+  <video id="v7"  src="./videos/event%205.mp4"       playsinline preload="metadata" loop></video>
+  <video id="v8"  src="./videos/event%206.mp4"       playsinline preload="metadata" loop></video>
+  <video id="v9"  src="./videos/Market%20shot1.mp4"  playsinline preload="metadata" loop></video>
+  <video id="v10" src="./videos/Market%20shot2.mp4"  playsinline preload="metadata" loop></video>
+  <video id="v11" src="./videos/Market%20shot3.mp4"  playsinline preload="metadata" loop></video>
+  <video id="v12" src="./videos/Market%20shot4.mp4"  playsinline preload="metadata" loop></video>
+  <video id="v13" src="./videos/Market%20shot5.mp4"  playsinline preload="metadata" loop></video>
+  <video id="v14" src="./videos/Market%20shot6.mp4"  playsinline preload="metadata" loop></video>
+  <video id="v15" src="./videos/playground_1.mp4"    playsinline preload="metadata" loop></video>
+  <video id="v16" src="./videos/playground_2.mp4"    playsinline preload="metadata" loop></video>
+  <video id="v17" src="./videos/playground_3.mp4"    playsinline preload="metadata" loop></video>
+  <video id="v18" src="./videos/playground_4.mp4"    playsinline preload="metadata" loop></video>
+  <video id="v19" src="./videos/playground_5.mp4"    playsinline preload="metadata" loop></video>
+</div>
+
+<!-- ── Canvas ────────────────────────────────────────────────────────── -->
+<canvas id="c"></canvas>
+
+<!-- ── Overlays ──────────────────────────────────────────────────────── -->
+<div id="scanlines"></div>
+
+<div id="overlay">
+  <div class="ov-box">
+    <span class="ov-sub">// SIMULATION READY · WOLFSBURG 2045</span>
+    <div class="ov-title">PROJEKT UMBAU<br>3D WORLD</div>
+    <span class="ov-desc">CLICK TO ENTER &nbsp;·&nbsp; WASD MOVE &nbsp;·&nbsp; MOUSE LOOK<br>WALK WITHIN 3 UNITS OF A SCREEN &nbsp;·&nbsp; PRESS <strong>E</strong> TO PLAY / PAUSE &nbsp;·&nbsp; ESC EXIT</span>
+  </div>
+</div>
+
+<div id="xhair">
+  <span class="xh-h"></span>
+  <span class="xh-v"></span>
+</div>
+
+<div id="hint">
+  <div id="hint-key">E</div>
+  <span id="hint-action">PLAY / PAUSE</span>
+  <span id="hint-label"></span>
+</div>
+
+<div id="screen-title"></div>
+
+<div id="hud-tl" class="hud-corner">
+  <span>// PROJEKT UMBAU</span>
+  <span class="hud-val">3D SIMULATION — WOLFSBURG</span>
+</div>
+<div id="hud-tr" class="hud-corner">
+  <span>POSITION</span>
+  <span id="hud-coords" class="hud-val">X 0.0 · Z 0.0</span>
+</div>
+<div id="hud-bl" class="hud-corner">
+  <span>WASD &nbsp;MOVE</span>
+  <span>MOUSE &nbsp;LOOK</span>
+  <span><strong style="color:rgba(200,169,110,.8)">E</strong> &nbsp;PLAY / PAUSE</span>
+  <span>ESC &nbsp;EXIT</span>
+</div>
+<div id="hud-br" class="hud-corner">
+  <span id="hud-playing" class="standby">SYS:STANDBY</span>
+  <span id="hud-count" class="hud-val">0 SCREENS ACTIVE</span>
+</div>
+
+<!-- ── Three.js (global build via CDN) ───────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.min.js"></script>
+
+<script>
+'use strict';
+// ─── Renderer ────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(0x020205);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+window.addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// ─── Scene & camera ──────────────────────────────────────────────────────
+const scene  = new THREE.Scene();
+scene.fog    = new THREE.Fog(0x020205, 30, 78);
+
+const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.1, 200);
+camera.position.set(0, 1.7, 22);
+camera.rotation.order = 'YXZ';
+
+// ─── Lighting ────────────────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0xccd4e8, 0.55));
+const fillLight = new THREE.DirectionalLight(0xffffff, 1.0);
+fillLight.position.set(8, 20, 8);
+scene.add(fillLight);
+scene.add(new THREE.HemisphereLight(0x1a1a3e, 0x0a0605, 1.2));
+
+// ─── Floor ───────────────────────────────────────────────────────────────
+const floorMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(130, 130),
+  new THREE.MeshStandardMaterial({ color: 0x0a0a14, roughness: 0.9, metalness: 0.15 })
+);
+floorMesh.rotation.x = -Math.PI / 2;
+scene.add(floorMesh);
+
+// Major grid (5 m cells, gold)
+const gridMajor = new THREE.GridHelper(120, 24, 0xc8a96e, 0xc8a96e);
+gridMajor.position.y = 0.003;
+gridMajor.material.transparent = true;
+gridMajor.material.opacity = 0.35;
+scene.add(gridMajor);
+
+// Fine grid (1 m cells, very dark)
+const gridMinor = new THREE.GridHelper(120, 120, 0x1a1228, 0x1a1228);
+gridMinor.position.y = 0.001;
+scene.add(gridMinor);
+
+// Sky sphere
+scene.add(Object.assign(
+  new THREE.Mesh(
+    new THREE.SphereGeometry(95, 12, 8),
+    new THREE.MeshBasicMaterial({ color: 0x020208, side: THREE.BackSide })
+  )
+));
+
+// ─── Zone markers (coloured pillar + light) ───────────────────────────────
+function addZoneMarker(x, z, hex) {
+  const mat  = new THREE.MeshStandardMaterial({ color: 0x0e0e18, metalness: 0.88, roughness: 0.18 });
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 11, 8), mat);
+  pole.position.set(x, 5.5, z);
+  scene.add(pole);
+
+  const cap = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.1, 0.5),
+    new THREE.MeshStandardMaterial({ emissive: new THREE.Color(hex), emissiveIntensity: 4, color: 0x000000 })
+  );
+  cap.position.set(x, 11.05, z);
+  scene.add(cap);
+
+  const pl = new THREE.PointLight(hex, 2.5, 22);
+  pl.position.set(x, 10, z);
+  scene.add(pl);
+}
+addZoneMarker(-20, -7,  0xc8a96e); // Event
+addZoneMarker(  0, -10, 0x4aff8a); // Market
+addZoneMarker( 20, -7,  0x9a7eb0); // Playground
+
+// ─── Screen layout ────────────────────────────────────────────────────────
+// [videoId, x, y, z, rotY(rad), width, height, label]
+const SCREEN_DATA = [
+  // Background title screen (large, straight ahead at the far end)
+  [0,  0, 6.5, -32,  0,              18, 10.125, '// PROJEKT UMBAU · WOLFSBURG 2045'],
+
+  // Intro (entry, face player approaching from z=22)
+  [1, -5.5, 3.5,  9,  0,   8,  4.5,  '01 — INITIATING SEQUENCE'],
+  [2,  5.5, 3.5,  9,  0,   8,  4.5,  '02 — DEPLOYMENT SEQUENCE'],
+
+  // Event Space — left wing (screens face +X, player walks along x≈0 looking left)
+  [3, -20, 3.5,   4,  Math.PI/2,    8, 4.5, 'EVENT SPACE · 01'],
+  [4, -20, 3.5,  -4,  Math.PI/2,    8, 4.5, 'EVENT SPACE · 02'],
+  [5, -20, 3.5, -12,  Math.PI/2,    8, 4.5, 'EVENT SPACE · 03'],
+  [6, -14, 3.5, -20,  Math.PI/4,    8, 4.5, 'EVENT SPACE · 04'],
+  [7,  -5, 3.5, -25,  0,            8, 4.5, 'EVENT SPACE · 05'],
+  [8,  -5, 7.5, -25,  0,            8, 4.5, 'EVENT SPACE · 06'],
+
+  // Market — centre corridor
+  [9,   0, 3.5,  -7,  0,            8, 4.5, 'MARKET · 01'],
+  [10, -5, 3.5, -14,  Math.PI/8,    8, 4.5, 'MARKET · 02'],
+  [11,  5, 3.5, -14, -Math.PI/8,    8, 4.5, 'MARKET · 03'],
+  [12,  0, 3.5, -21,  0,            8, 4.5, 'MARKET · 04'],
+  [13, -4, 7.5, -17,  Math.PI/6,    8, 4.5, 'MARKET · 05'],
+  [14,  4, 7.5, -17, -Math.PI/6,    8, 4.5, 'MARKET · 06'],
+
+  // Playground — right wing (screens face -X)
+  [15, 20, 3.5,   4, -Math.PI/2,    8, 4.5, 'PLAYGROUND · 01'],
+  [16, 20, 3.5,  -4, -Math.PI/2,    8, 4.5, 'PLAYGROUND · 02'],
+  [17, 20, 3.5, -12, -Math.PI/2,    8, 4.5, 'PLAYGROUND · 03'],
+  [18, 14, 3.5, -20, -Math.PI/4,    8, 4.5, 'PLAYGROUND · 04'],
+  [19,  5, 3.5, -25,  0,            8, 4.5, 'PLAYGROUND · 05'],
+];
+
+// ─── Build screen meshes ──────────────────────────────────────────────────
+const screens = [];
+
+SCREEN_DATA.forEach(([vid, px, py, pz, ry, sw, sh, label]) => {
+  const video = document.getElementById('v' + vid);
+
+  const tex = new THREE.VideoTexture(video);
+  tex.minFilter    = THREE.LinearFilter;
+  tex.magFilter    = THREE.LinearFilter;
+  tex.colorSpace   = THREE.SRGBColorSpace;
+
+  const group = new THREE.Group();
+  group.position.set(px, py, pz);
+  group.rotation.y = ry;
+  scene.add(group);
+
+  // Frame (housing) — emissive material so we can highlight it
+  const frameMat = new THREE.MeshStandardMaterial({
+    color:             0x111120,
+    emissive:          new THREE.Color(0x111120),
+    emissiveIntensity: 0,
+    metalness:         0.85,
+    roughness:         0.2,
+  });
+  group.add(Object.assign(
+    new THREE.Mesh(new THREE.BoxGeometry(sw + 0.5, sh + 0.5, 0.2), frameMat)
+  ));
+
+  // Highlight border ring (becomes visible when in range)
+  const borderMat = new THREE.MeshBasicMaterial({
+    color: 0xc8a96e, transparent: true, opacity: 0,
+  });
+  const border = new THREE.Mesh(
+    new THREE.BoxGeometry(sw + 0.75, sh + 0.75, 0.06),
+    borderMat
+  );
+  border.position.z = -0.14;
+  group.add(border);
+
+  // Screen plane — video texture
+  const screenMat = new THREE.MeshBasicMaterial({
+    map:  tex,
+    side: THREE.DoubleSide,
+    color: 0x222222,      // starts dark (video paused = no frame data)
+  });
+  const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), screenMat);
+  screenMesh.position.z = 0.11;
+  group.add(screenMesh);
+
+  // Screen glow point light (intensity 0 until playing)
+  const light = new THREE.PointLight(0x3355ff, 0, 18);
+  light.position.set(0, 0, 1.2);
+  group.add(light);
+
+  screens.push({
+    video, tex, frameMat, borderMat, screenMat, light, label,
+    // 2D position for XZ-plane distance check (ignore Y for walk-up detection)
+    x: px, z: pz,
+  });
+});
+
+// ─── Pointer lock & HUD refs ─────────────────────────────────────────────
+const overlay     = document.getElementById('overlay');
+const xhair       = document.getElementById('xhair');
+const hint        = document.getElementById('hint');
+const hintKey     = document.getElementById('hint-key');
+const hintAction  = document.getElementById('hint-action');
+const hintLabel   = document.getElementById('hint-label');
+const screenTitle = document.getElementById('screen-title');
+const hudCoords   = document.getElementById('hud-coords');
+const hudPlaying  = document.getElementById('hud-playing');
+const hudCount    = document.getElementById('hud-count');
+const hudCorners  = document.querySelectorAll('.hud-corner');
+
+let locked       = false;
+let yaw          = 0;
+let pitch        = 0;
+let nearestIdx   = -1;
+
+function showHUD(show) {
+  xhair.style.opacity = show ? '1' : '0';
+  hudCorners.forEach(el => el.style.opacity = show ? '1' : '0');
+}
+
+// Enter pointer lock on click
+overlay.addEventListener('click', () => canvas.requestPointerLock());
+canvas.addEventListener('click',  () => { if (!locked) canvas.requestPointerLock(); });
+
+document.addEventListener('pointerlockchange', () => {
+  locked = !!document.pointerLockElement;
+  overlay.style.display = locked ? 'none' : 'flex';
+  showHUD(locked);
+
+  if (!locked) {
+    // ESC: pause every playing video
+    screens.forEach(s => {
+      if (!s.video.paused) {
+        s.video.pause();
+        s.light.intensity = 0;
+        s.screenMat.color.setHex(0x222222);
+      }
+    });
+    hint.style.opacity        = '0';
+    screenTitle.style.opacity = '0';
+  }
+});
+
+// Mouse look
+document.addEventListener('mousemove', e => {
+  if (!locked) return;
+  yaw   -= e.movementX * 0.0018;
+  pitch -= e.movementY * 0.0018;
+  pitch  = Math.max(-1.38, Math.min(1.38, pitch));
+  camera.rotation.y = yaw;
+  camera.rotation.x = pitch;
+});
+
+// ─── Keyboard ────────────────────────────────────────────────────────────
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+
+  // E — toggle nearest screen
+  if (e.code === 'KeyE' && locked && nearestIdx >= 0) {
+    const s = screens[nearestIdx];
+    if (s.video.paused) {
+      s.video.play().catch(() => {});
+      s.light.intensity = 2.2;
+      s.screenMat.color.setHex(0xffffff); // brighten when playing
+    } else {
+      s.video.pause();
+      s.light.intensity = 0;
+      s.screenMat.color.setHex(0x222222);
+    }
+    hintKey.classList.toggle('active', true);
+    setTimeout(() => hintKey.classList.remove('active'), 160);
+  }
+});
+document.addEventListener('keyup', e => { delete keys[e.code]; });
+
+// ─── Movement ────────────────────────────────────────────────────────────
+const _fwd   = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const _yUp   = new THREE.Vector3(0, 1, 0);
+const SPEED  = 8;
+const BOUNDS = 38;
+
+function updateMovement(dt) {
+  if (!locked) return;
+  const spd = SPEED * Math.min(dt, 0.05);
+  camera.getWorldDirection(_fwd);
+  _fwd.y = 0;
+  _fwd.normalize();
+  _right.crossVectors(_fwd, _yUp);
+  if (keys.KeyW) camera.position.addScaledVector(_fwd,   spd);
+  if (keys.KeyS) camera.position.addScaledVector(_fwd,  -spd);
+  if (keys.KeyA) camera.position.addScaledVector(_right, -spd);
+  if (keys.KeyD) camera.position.addScaledVector(_right,  spd);
+  camera.position.x = Math.max(-BOUNDS, Math.min(BOUNDS, camera.position.x));
+  camera.position.z = Math.max(-BOUNDS, Math.min(BOUNDS, camera.position.z));
+  camera.position.y = 1.7; // lock eye level
+}
+
+// ─── Per-frame screen interaction ────────────────────────────────────────
+const INTERACT_DIST  = 3.0;  // E activates within this range
+const HIGHLIGHT_DIST = 6.0;  // border glow starts fading in here
+
+function updateScreens() {
+  nearestIdx = -1;
+  let nearestDist = Infinity;
+  let playingCount = 0;
+
+  const cx = camera.position.x;
+  const cz = camera.position.z;
+
+  screens.forEach((s, i) => {
+    // Update video texture every frame (no-op when paused, cheap when playing)
+    if (s.video.readyState >= 2) s.tex.needsUpdate = true;
+    if (!s.video.paused) playingCount++;
+
+    // XZ-plane distance (ignore Y so player height doesn't affect reach)
+    const dx   = cx - s.x;
+    const dz   = cz - s.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+
+    // Highlight: border opacity + frame emissive
+    if (dist < HIGHLIGHT_DIST) {
+      const t = 1 - dist / HIGHLIGHT_DIST;           // 0→1 as you approach
+
+      s.borderMat.opacity = Math.min(1, t * 1.3) * (dist < INTERACT_DIST ? 0.9 : 0.35);
+      s.frameMat.emissive.setHex(dist < INTERACT_DIST ? 0xc8a96e : 0x2a2838);
+      s.frameMat.emissiveIntensity = dist < INTERACT_DIST ? 0.4 : t * 0.15;
+
+      if (dist < nearestDist) { nearestDist = dist; nearestIdx = i; }
+    } else {
+      s.borderMat.opacity        = 0;
+      s.frameMat.emissive.setHex(0x111120);
+      s.frameMat.emissiveIntensity = 0;
+    }
+  });
+
+  // Hint HUD
+  const inRange = locked && nearestIdx >= 0 && nearestDist < INTERACT_DIST;
+  hint.style.opacity        = inRange ? '1' : '0';
+  screenTitle.style.opacity = inRange ? '0.7' : '0';
+
+  if (inRange) {
+    const s = screens[nearestIdx];
+    hintLabel.textContent  = s.label;
+    screenTitle.textContent = s.label;
+    hintAction.textContent  = s.video.paused ? 'PRESS E — PLAY' : 'PRESS E — PAUSE';
+  }
+
+  // Playing count HUD
+  if (locked) {
+    if (playingCount > 0) {
+      hudPlaying.textContent = '▶ SYS:ACTIVE';
+      hudPlaying.classList.remove('standby');
+    } else {
+      hudPlaying.textContent = 'SYS:STANDBY';
+      hudPlaying.classList.add('standby');
+    }
+    hudCount.textContent = playingCount + ' SCREEN' + (playingCount === 1 ? '' : 'S') + ' ACTIVE';
+  }
+}
+
+// ─── Render loop ──────────────────────────────────────────────────────────
+let lastT = 0;
+function loop(t) {
+  requestAnimationFrame(loop);
+  const dt = (t - lastT) / 1000;
+  lastT = t;
+  updateMovement(dt);
+  updateScreens();
+  if (locked) {
+    hudCoords.textContent = 'X ' + camera.position.x.toFixed(1) +
+                            ' · Z ' + camera.position.z.toFixed(1);
+  }
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
 </html>
