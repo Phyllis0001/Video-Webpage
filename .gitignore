@@ -1,14 +1,12 @@
 node_modules/
 dist/
 
-# Ignore raw mp4s at project root — use public/videos/ for deployment
-*.mp4
-*.mov
-*.avi
-*.webm
-
-# But DO track videos inside public/videos/
-!public/videos/*.mp4
+# Exclude mp4s only at the project ROOT (leading slash = root-anchored)
+# This does NOT affect public/videos/ or dist/videos/ subdirectories
+/*.mp4
+/*.mov
+/*.avi
+/*.webm
 
 # OS
 .DS_Store
